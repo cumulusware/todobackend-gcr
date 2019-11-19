@@ -15,7 +15,7 @@ func DescribeAll() http.HandlerFunc {
 // ReadAll handles the GET method to list all todos.
 func ReadAll() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		helpers.RespondWithJSON(w, http.StatusOK, "Hello")
+		helpers.RespondWithJSON(w, http.StatusOK, nil)
 	}
 }
 
