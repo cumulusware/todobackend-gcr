@@ -4,12 +4,13 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 
+	"todobackend-gcr/data/firestoreds"
 	"todobackend-gcr/resources/todos"
 )
 
-func createRoutes() *mux.Router {
+func createRoutes(ds *firestoreds.Store) *mux.Router {
 	r := mux.NewRouter().StrictSlash(true)
-	todos.AddRoutes(r, "/api/todos")
+	todos.AddRoutes(r, ds.Todos, "/api/todos")
 	return r
 }
 

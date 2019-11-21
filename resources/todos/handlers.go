@@ -1,6 +1,7 @@
 package todos
 
 import (
+	"encoding/json"
 	"net/http"
 	"todobackend-gcr/helpers"
 )
@@ -13,25 +14,45 @@ func DescribeAll() http.HandlerFunc {
 }
 
 // ReadAll handles the GET method to list all todos.
-func ReadAll() http.HandlerFunc {
+func ReadAll(ds DataStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		helpers.RespondWithJSON(w, http.StatusOK, nil)
+		todos, err := ds.GetAll()
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		helpers.RespondWithJSON(w, http.StatusOK, todos)
 	}
 }
 
 // Create handles the POST method to create a new todo.
-func Create() http.HandlerFunc {
+func Create(ds DataStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		todo := Todo{
-			Title: "a todo",
+		var t Todo
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&t); err != nil {
+			helpers.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+			return
 		}
-		helpers.RespondWithJSON(w, http.StatusOK, todo)
+		defer r.Body.Close()
+
+		_, err := ds.Create(&t)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		helpers.RespondWithJSON(w, http.StatusCreated, t)
 	}
 }
 
 // DeleteAll handles the DELETE method to delete all todos.
-func DeleteAll() http.HandlerFunc {
+func DeleteAll(ds DataStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		helpers.RespondWithJSON(w, http.StatusNoContent, "")
+		if err := ds.DeleteAll(); err != nil {
+			helpers.RespondWithError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		helpers.RespondWithJSON(w, http.StatusNoContent, nil)
 	}
 }
