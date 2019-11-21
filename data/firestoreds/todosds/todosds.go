@@ -80,7 +80,7 @@ func (ds *DataStore) DeleteAll() error {
 
 func convertDocToTodo(doc map[string]interface{}) todos.Todo {
 	var todo todos.Todo
-	title, ok := doc["title"].(string)
+	title, ok := doc["Title"].(string)
 	if !ok {
 		todo.Title = ""
 	} else {
