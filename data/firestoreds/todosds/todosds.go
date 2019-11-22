@@ -26,14 +26,8 @@ func NewDataStore(ctx context.Context, c *firestore.Client) (*DataStore, error) 
 	return &ds, nil
 }
 
-// Create stores a new todo in the DataStore.
-func (ds *DataStore) Create(todo *todos.Todo) (string, error) {
-	docRef, _, err := ds.Collection.Add(ds.ctx, todo)
-	return docRef.ID, err
-}
-
 // GetAll returns all todos found in the DataStore.
-func (ds *DataStore) GetAll() ([]todos.Todo, error) {
+func (ds *DataStore) GetAll(baseURL string) ([]todos.Todo, error) {
 	var todos []todos.Todo
 
 	iter := ds.Collection.Documents(ds.ctx)
@@ -46,10 +40,31 @@ func (ds *DataStore) GetAll() ([]todos.Todo, error) {
 			log.Fatalf("Failed to iterate: %v", err)
 		}
 		todo := convertDocToTodo(doc.Data())
+		todo.URL = baseURL + doc.Ref.ID
 		todos = append(todos, todo)
 	}
 
 	return todos, nil
+}
+
+// GetByID returns one todo found in the DataStore.
+func (ds *DataStore) GetByID(id, url string) (todos.Todo, error) {
+	var todo todos.Todo
+	docsnap, err := ds.Collection.Doc(id).Get(ds.ctx)
+	if err != nil {
+		return todo, err
+	}
+	dataMap := docsnap.Data()
+	todo = convertDocToTodo(dataMap)
+	todo.URL = url
+
+	return todo, nil
+}
+
+// Create stores a new todo in the DataStore.
+func (ds *DataStore) Create(todo *todos.Todo) (string, error) {
+	docRef, _, err := ds.Collection.Add(ds.ctx, todo)
+	return docRef.ID, err
 }
 
 // DeleteAll deletes all todos in the DataStore.
@@ -78,20 +93,16 @@ func (ds *DataStore) DeleteAll() error {
 	return err
 }
 
-// GetByID returns one todo found in the DataStore.
-func (ds *DataStore) GetByID(id, url string) (todos.Todo, error) {
-	var todo todos.Todo
-	todos := ds.Collection
-	desiredTodo := todos.Doc(id)
-	docsnap, err := desiredTodo.Get(ds.ctx)
-	if err != nil {
-		return todo, err
-	}
-	dataMap := docsnap.Data()
-	todo = convertDocToTodo(dataMap)
-	todo.URL = url
+// DeleteByID delets one todo found in the DataStore.
+func (ds *DataStore) DeleteByID(id string) error {
+	_, err := ds.Collection.Doc(id).Delete(ds.ctx)
+	return err
+}
 
-	return todo, nil
+// UpdateByID updates one todo found in the DataStore.
+func (ds *DataStore) UpdateByID(id string, todo *todos.Todo) error {
+	_, err := ds.Collection.Doc(id).Set(ds.ctx, todo)
+	return err
 }
 
 func convertDocToTodo(doc map[string]interface{}) todos.Todo {

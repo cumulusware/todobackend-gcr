@@ -15,10 +15,18 @@ func DescribeAll() http.HandlerFunc {
 	}
 }
 
+// Describe handles the OPTIONS method for the todos/ endpoint.
+func Describe() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		helpers.RespondWithOptions(w, "GET,PATCH,DELETE,OPTIONS")
+	}
+}
+
 // ReadAll handles the GET method to list all todos.
 func ReadAll(ds DataStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		todos, err := ds.GetAll()
+		baseURL := createURL(r)
+		todos, err := ds.GetAll(baseURL)
 		if err != nil {
 			helpers.RespondWithError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -73,6 +81,48 @@ func DeleteAll(ds DataStore) http.HandlerFunc {
 			return
 		}
 		helpers.RespondWithJSON(w, http.StatusNoContent, nil)
+	}
+}
+
+// Delete handles the DELETE method to delete a todo.
+func Delete(ds DataStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := path.Base(r.URL.Path)
+		if err := ds.DeleteByID(id); err != nil {
+			helpers.RespondWithError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		helpers.RespondWithJSON(w, http.StatusNoContent, "")
+	}
+}
+
+// Update handles the PATCH method to update a portion of a todo.
+func Update(ds DataStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get current todo using ID.
+		id := path.Base(r.URL.Path)
+		url := createURL(r)
+		todo, err := ds.GetByID(id, url)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Update the todo.
+		err = json.NewDecoder(r.Body).Decode(&todo)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+			return
+		}
+		defer r.Body.Close()
+
+		err = ds.UpdateByID(id, &todo)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		helpers.RespondWithJSON(w, http.StatusCreated, todo)
 	}
 }
 
