@@ -28,7 +28,7 @@ func NewDataStore(ctx context.Context, c *firestore.Client) (*DataStore, error) 
 
 // GetAll returns all todos found in the DataStore.
 func (ds *DataStore) GetAll(baseURL string) ([]todos.Todo, error) {
-	var todos []todos.Todo
+	var theTodos []todos.Todo
 
 	iter := ds.Collection.Documents(ds.ctx)
 	for {
@@ -39,12 +39,16 @@ func (ds *DataStore) GetAll(baseURL string) ([]todos.Todo, error) {
 		if err != nil {
 			log.Fatalf("Failed to iterate: %v", err)
 		}
-		todo := convertDocToTodo(doc.Data())
+		var todo todos.Todo
+		err = doc.DataTo(&todo)
+		if err != nil {
+			return theTodos, err
+		}
 		todo.URL = baseURL + doc.Ref.ID
-		todos = append(todos, todo)
+		theTodos = append(theTodos, todo)
 	}
 
-	return todos, nil
+	return theTodos, nil
 }
 
 // GetByID returns one todo found in the DataStore.
@@ -54,10 +58,8 @@ func (ds *DataStore) GetByID(id, url string) (todos.Todo, error) {
 	if err != nil {
 		return todo, err
 	}
-	dataMap := docsnap.Data()
-	todo = convertDocToTodo(dataMap)
+	err = docsnap.DataTo(&todo)
 	todo.URL = url
-
 	return todo, nil
 }
 
@@ -103,24 +105,4 @@ func (ds *DataStore) DeleteByID(id string) error {
 func (ds *DataStore) UpdateByID(id string, todo *todos.Todo) error {
 	_, err := ds.Collection.Doc(id).Set(ds.ctx, todo)
 	return err
-}
-
-func convertDocToTodo(doc map[string]interface{}) todos.Todo {
-	var todo todos.Todo
-	if title, ok := doc["Title"].(string); !ok {
-		todo.Title = ""
-	} else {
-		todo.Title = title
-	}
-	if completed, ok := doc["Completed"].(bool); !ok {
-		todo.Completed = false
-	} else {
-		todo.Completed = completed
-	}
-	if order, ok := doc["Order"].(int64); !ok {
-		todo.Order = 0
-	} else {
-		todo.Order = int(order)
-	}
-	return todo
 }
