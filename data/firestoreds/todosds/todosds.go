@@ -117,10 +117,10 @@ func convertDocToTodo(doc map[string]interface{}) todos.Todo {
 	} else {
 		todo.Completed = completed
 	}
-	if order, ok := doc["Order"].(int); !ok {
+	if order, ok := doc["Order"].(int64); !ok {
 		todo.Order = 0
 	} else {
-		todo.Order = order
+		todo.Order = int(order)
 	}
 	return todo
 }
