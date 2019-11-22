@@ -107,11 +107,20 @@ func (ds *DataStore) UpdateByID(id string, todo *todos.Todo) error {
 
 func convertDocToTodo(doc map[string]interface{}) todos.Todo {
 	var todo todos.Todo
-	title, ok := doc["Title"].(string)
-	if !ok {
+	if title, ok := doc["Title"].(string); !ok {
 		todo.Title = ""
 	} else {
 		todo.Title = title
+	}
+	if completed, ok := doc["Completed"].(bool); !ok {
+		todo.Completed = false
+	} else {
+		todo.Completed = completed
+	}
+	if order, ok := doc["Order"].(int); !ok {
+		todo.Order = 0
+	} else {
+		todo.Order = order
 	}
 	return todo
 }
