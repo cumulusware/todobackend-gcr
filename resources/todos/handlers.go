@@ -2,7 +2,9 @@ package todos
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"path"
 	"todobackend-gcr/helpers"
 )
 
@@ -25,6 +27,20 @@ func ReadAll(ds DataStore) http.HandlerFunc {
 	}
 }
 
+// Read handles the GET method to list all todos.
+func Read(ds DataStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := path.Base(r.URL.Path)
+		url := createURL(r)
+		todo, err := ds.GetByID(id, url)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		helpers.RespondWithJSON(w, http.StatusOK, todo)
+	}
+}
+
 // Create handles the POST method to create a new todo.
 func Create(ds DataStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -36,11 +52,14 @@ func Create(ds DataStore) http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-		_, err := ds.Create(&t)
+		id, err := ds.Create(&t)
 		if err != nil {
 			helpers.RespondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		baseURL := createURL(r)
+		t.URL = baseURL + id
+		w.Header().Set("Location", baseURL+id)
 
 		helpers.RespondWithJSON(w, http.StatusCreated, t)
 	}
@@ -55,4 +74,13 @@ func DeleteAll(ds DataStore) http.HandlerFunc {
 		}
 		helpers.RespondWithJSON(w, http.StatusNoContent, nil)
 	}
+}
+
+func createURL(r *http.Request) string {
+	protocol, err := helpers.Protocol(r.Host)
+	if err != nil {
+		protocol = "https://"
+		log.Printf("Error determining protocol for host %s. Defaulting to https://", r.Host)
+	}
+	return protocol + r.Host + r.URL.String()
 }

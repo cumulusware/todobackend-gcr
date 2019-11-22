@@ -78,6 +78,22 @@ func (ds *DataStore) DeleteAll() error {
 	return err
 }
 
+// GetByID returns one todo found in the DataStore.
+func (ds *DataStore) GetByID(id, url string) (todos.Todo, error) {
+	var todo todos.Todo
+	todos := ds.Collection
+	desiredTodo := todos.Doc(id)
+	docsnap, err := desiredTodo.Get(ds.ctx)
+	if err != nil {
+		return todo, err
+	}
+	dataMap := docsnap.Data()
+	todo = convertDocToTodo(dataMap)
+	todo.URL = url
+
+	return todo, nil
+}
+
 func convertDocToTodo(doc map[string]interface{}) todos.Todo {
 	var todo todos.Todo
 	title, ok := doc["Title"].(string)
